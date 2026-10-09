@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#17151f">
+<title>抽卡</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0; min-height:100vh; background:#160017; color:#CEFDFF;
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;
+  display:flex; justify-content:center; overflow-x:hidden;
+}
+.app{
+  width:100%;
+  max-width:900px;
+  min-height:100vh;
+  padding:42px 10px 32px;
+  text-align:center;
+}
+h1{font-size:28px; margin:0 0 8px; letter-spacing:.08em}
+.subtitle{color:#BBD5ED;font-size:14px;margin-bottom:38px}
+.cards{
+  display:grid;
+  grid-template-columns:repeat(6, 1fr);
+  gap:4px;
+  align-items:center;
+  width:calc(100% + 20px);
+  margin-left:-10px;
+}
+
+.card-wrap{
+  width:100%;
+  max-width:165px;
+  justify-self:center;
+}
+.card{
+  width:100%;aspect-ratio:2/3;position:relative;transform-style:preserve-3d;
+  transition:transform .8s cubic-bezier(.2,.75,.25,1);
+}
+.card.flipped{transform:rotateY(180deg)}
+.card-image{
+  width:100%;
+  height:65%;
+  object-fit:cover;
+  border-radius:9px;
+  display:block;
+  margin-bottom:8px;
+}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:13px;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;
+}
+.back{
+  background-image:url("images/card-back.jpg");
+  background-size:cover;
+  background-position:center;
+  border:0;
+}
+.back::before{
+  content:"$";font-size:28px;color:#b9a3ff;
+  width:58%;height:68%;border:0px solid #6c5a92;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 0 25px #8b6cff18;
+}
+.front{
+  transform:rotateY(180deg);background:#f7f1e7;color:#241f2d;
+  border:3px solid #fff0;box-shadow:0 8px 24px #0006;
+  flex-direction:column;padding:8px;
+}
+.front .symbol{font-size:28px;margin-bottom:8px}
+.front .name{font-size:13px;font-weight:700}
+.front .rarity{font-size:10px;color:#82788f;margin-top:5px}
+.card-wrap.selected{transform:translateY(-14px) scale(1.1);z-index:3}
+.card-wrap.selected .front{
+  border-color:#f6d76b;box-shadow:0 0 0 3px #f6d76b66,0 0 35px #f6d76b88;
+}
+.card-wrap.dimmed{opacity:.58;filter:saturate(.7)}
+.hint{margin-top:30px;color:#bcb5c8;font-size:14px}
+.result{
+  margin:30px auto 0;
+  max-width:500px;
+  padding:22px 20px;
+  border-radius:18px;
+  background:#211d2b;
+  border:1px solid #3e354f;
+  opacity:0;
+  transform:translateY(12px);
+  transition:.45s;
+  pointer-events:none;
+}
+
+.result.show{
+  opacity:1;
+  transform:none;
+  pointer-events:auto;
+}
+.result.show{opacity:1;transform:none}
+.result .label{font-size:12px;color:#a99db8;letter-spacing:.15em}
+.result h2{margin:8px 0 5px;font-size:24px}
+.result p{margin:0;color:#aaa3b1;font-size:13px}
+button{
+  margin-top:20px;border:0;border-radius:999px;padding:12px 24px;
+  background:#f6d76b;color:#241f2d;font-weight:700;font-size:14px;cursor:pointer;
+}
+@media(max-width:520px){
+  .app{
+    width:100%;
+    padding:34px 4px 32px;
+  }
+
+  .cards{
+    width:100%;
+    margin-left:0;
+    gap:6px;
+  }
+
+  .face{
+    border-radius:10px;
+  }
+
+  .front .symbol{
+    font-size:20px;
+    margin-bottom:5px;
+  }
+
+  .front .name{
+    font-size:10px;
+  }
+
+  .front .rarity{
+    font-size:8px;
+  }
+
+  .card-wrap.selected{
+    transform:translateY(-10px) scale(1.1);
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>叫你選你就選一張就對了</h1>
+  <div class="subtitle">柔霈錢錢債築高台嚕呀</div>
+
+  <section class="cards" id="cards"></section>
+  <div class="hint" id="hint">請選擇</div>
+
+  <section class="result" id="result">
+    <div class="label">恭喜你獲得</div>
+    <h2 id="resultName"></h2>
+    <p id="resultText"></p>
+    <button id="again">再抽一次</button>
+  </section>
+</main>
+
+<script>
+const data = [
+   {
+    name:"喇叭一勾巴拉巴巴巴",
+    image:"images/speaker.jpg",
+    text:"喇叭？不是啊？喇叭是怎樣啦？你是要在家裡開演唱會是不是？蛤？買一顆喇叭那麼大聲是鄰居不用睡覺是不是啦！"
+  },
+  {
+    name:"冰箱一台冰箱一台",
+    image:"images/ice.jpg",
+    text:"不是 你講了那麼多，其實我跟你講一件事情，會買冰箱的人只有兩種人，哪兩種人？一個叫做有冰箱的人……一個叫做沒有冰箱的人……其實就是這兩種人而已。"
+  },
+  {
+    name:"電視一台",
+    image:"images/tv.jpg",
+    text:"我跟你講，買電視，我跟你講，不是，先聽我說，先聽我講，我跟你講，你先你先你先你先聽我講，買電視，這個東西我跟你講，我跟你講，我跟你講買電視是你先聽我講，買電視，這個東西我跟你講"
+  },
+   {
+    name:"沙花",
+    image:"images/sofa.jpg",
+    text:"買沙發～～！哇！新沙發！可是等等……為什麼我們要買沙發呢？喔！因為沙發可以坐！可是我們已經有椅子了呀！那為什麼還要沙發？因為沙發可以躺！哇～～～～！可以坐、可以躺，還可以在上面吃零食！等等，這是不是代表我們可以一邊躺在沙發上，一邊吃東西，一邊看電視？太棒啦！我要買沙發！我要買一張超級大的沙發！"
+  },
+  {
+    name:"洗咧考呦洗衣機",
+    image:"images/washing.jpg",
+    text:"洗衣機？不是，洗衣機這個東西很奇怪欸。我跟你講，衣服髒了你就要洗，對不對？你買一台洗衣機回來，結果衣服還是放地上，洗衣機是觀賞用的是不是？"
+  },
+  {
+    name:"噗囉索尼路由器",
+    image:"images/thanks.jpg",
+    text:"買PS5?蛤?你又要買 PS5?不是啊，你現在那台不能玩是不是？到底是怎樣？買回去之後勒？開機三天，遊戲玩兩個小時，然後放在那邊積灰塵是不是？啊你買來幹嘛？拿來看藍光是不是?蛤?真的有夠扯，錢太多是不是!"
+  }
+];
+
+const cardsEl = document.getElementById("cards");
+const hint = document.getElementById("hint");
+const result = document.getElementById("result");
+const resultName = document.getElementById("resultName");
+const resultText = document.getElementById("resultText");
+let locked = false;
+
+function render(){
+  locked = false;
+  result.classList.remove("show");
+  hint.textContent = "選一張";
+  cardsEl.innerHTML = data.map((c,i)=>`
+    <div class="card-wrap" data-index="${i}">
+      <div class="card">
+        <div class="face back"></div>
+        <div class="face front">
+  <img class="card-image" src="${c.image}" alt="${c.name}">
+  <div class="name">${c.name}</div>
+  <div class="rarity">CARD ${String(i+1).padStart(2,"0")}</div>
+</div>
+        </div>
+      </div>
+    </div>`).join("");
+
+  document.querySelectorAll(".card-wrap").forEach(el=>{
+    el.addEventListener("click",()=>choose(Number(el.dataset.index)));
+  });
+}
+
+function choose(index){
+  if(locked) return;
+  locked = true;
+  hint.textContent = "究竟！你選中是什麼呢？！？！？！？！";
+
+  const wraps = [...document.querySelectorAll(".card-wrap")];
+  wraps[index].classList.add("selected");
+
+  // 先翻中選牌，再依序翻開其他牌
+  setTimeout(()=>wraps[index].querySelector(".card").classList.add("flipped"),120);
+
+  wraps.forEach((wrap,i)=>{
+    if(i!==index){
+      wrap.classList.add("dimmed");
+      setTimeout(()=>wrap.querySelector(".card").classList.add("flipped"),420 + Math.abs(i-index)*110);
+    }
+  });
+
+  setTimeout(()=>{
+    hint.textContent = "你獲得的是";
+    resultName.textContent = data[index].name;
+    resultText.textContent = data[index].text;
+    result.classList.add("show");
+  },1150 + Math.max(...wraps.map((_,i)=>Math.abs(i-index)*110)));
+}
+
+document.getElementById("again").addEventListener("click",render);
+render();
+</script>
+</body>
+</html>
